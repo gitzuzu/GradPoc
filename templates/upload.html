@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload SRS Document</title>
+    <style>
+        /* Style for the parsed JSON output */
+        #output {
+            white-space: pre-wrap; /* Ensures text wraps within the container */
+            background-color: #f4f4f9;
+            border: 1px solid #ccc;
+            padding: 15px;
+            max-width: 80%; /* Limits the width to 80% of the screen */
+            overflow-x: auto; /* Adds horizontal scroll if content overflows */
+            font-family: monospace; /* Makes it look more like code */
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <h2>Upload SRS PDF</h2>
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" id="pdfFile" name="pdfFile" accept="application/pdf" required />
+        <button type="submit">Upload</button>
+    </form>
+
+    <h3>Parsed JSON Output:</h3>
+    <pre id="output"></pre>
+
+    <script>
+    document.getElementById('uploadForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const formData = new FormData();
+    formData.append('pdfFile', document.getElementById('pdfFile').files[0]);
+
+    const response = await fetch('/upload_pdf', {
+        method: 'POST',
+        body: formData
+    });
+    
+    const result = await response.json();
+    
+    // Access the parsed SRS and validation results
+    const parsedSrs = result.parsed_srs;
+    const validationResults = result.validation;
+    
+    // Create output for parsed SRS
+    const parsedSrsFormatted = JSON.stringify(parsedSrs, null, 2);
+
+    // Create output for validation results
+    const validationResultsFormatted = JSON.stringify(validationResults, null, 2);
+
+    // Display both parsed SRS and validation results in the output
+    document.getElementById('output').textContent = 
+        "Parsed SRS Structure:\n" + parsedSrsFormatted + 
+        "\n\nValidation Results:\n" + validationResultsFormatted;
+});
+
+    </script>   
+</body>
+</html>
