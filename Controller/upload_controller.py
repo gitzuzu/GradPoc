@@ -35,4 +35,4 @@ def upload_pdf():
         "validation": validation_results
     })
 
-    return jsonify(parsed_srs)
+
