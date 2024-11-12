@@ -37,15 +37,13 @@ def parse_srs(text):
 
     # Start parsing from the content (after TOC)
     for line in content_lines:
-        # Check if line matches a main section title in PREDEFINED_STRUCTURE
-        if line in PREDEFINED_STRUCTURE:
+        # Check if line matches a main section title
+        if re.match(section_pattern, line):  # Main section titles
             # Save current section if content exists
             if current_section and current_content:
-                # Append the section, conditionally including 'subtitle' only if it exists
                 section_data = {"title": current_section, "content": current_content.strip()}
                 if current_subsection:
                     section_data["subtitle"] = current_subsection
-                
                 parsed_data.append(section_data)
                 current_content = ""
             
@@ -54,7 +52,7 @@ def parse_srs(text):
             current_subsection = None
             
         # Check for subsection titles within the current section
-        elif current_section and line in PREDEFINED_STRUCTURE.get(current_section, {}):
+        elif current_section and re.match(subsection_pattern, line):  # Subsection titles
             # Save current subsection if content exists
             if current_subsection and current_content:
                 section_data = {"title": current_section, "subtitle": current_subsection, "content": current_content.strip()}
