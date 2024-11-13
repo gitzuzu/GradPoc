@@ -1,5 +1,4 @@
 import re
-from models.srs_structure import PREDEFINED_STRUCTURE
 
 def parse_srs(text):
     parsed_data = []
@@ -20,6 +19,7 @@ def parse_srs(text):
     # Separate the TOC section and ignore it until the actual content begins
     content_lines = []
     content_started = False
+    abstract_section = None
 
     for line in lines:
         line = line.strip()
@@ -28,17 +28,31 @@ def parse_srs(text):
         if re.match(page_number_pattern, line) or re.match(dots_pattern, line):
             continue
         
-        # Skip TOC lines and start from "Abstract"
+        # Start capturing content after "Abstract" line is found
         if "Abstract" in line:
             content_started = True
+            abstract_section = {"title": "Abstract", "content": ""}
+            # Skip adding "Abstract" itself to the content
+            continue
         
-        if content_started and line:  # Only add lines after TOC ends
+        if content_started and line:
             content_lines.append(line)
 
-    # Start parsing from the content (after TOC)
+    # Parse content_lines after TOC
     for line in content_lines:
+        # Separate Abstract content until Introduction
+        if abstract_section and re.match(section_pattern, line) and "Introduction" in line:
+            # Save the Abstract section
+            parsed_data.append(abstract_section)
+            abstract_section = None
+            current_section = line
+            current_subsection = None
+            current_content = ""
+        elif abstract_section:
+            abstract_section["content"] += line + " "
+        
         # Check if line matches a main section title
-        if re.match(section_pattern, line):  # Main section titles
+        elif re.match(section_pattern, line):  # Main section titles
             # Save current section if content exists
             if current_section and current_content:
                 section_data = {"title": current_section, "content": current_content.strip()}
