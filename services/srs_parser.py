@@ -1,4 +1,85 @@
 import re
+import language_tool_python
+from spellchecker import SpellChecker
+
+grammar_tool = language_tool_python.LanguageTool('en-US')
+spell_checker = SpellChecker()
+
+# List of custom terms to ignore
+CUSTOM_TERMS = ['qanaa', 'srs']
+
+def check_spelling_and_grammar(text):
+    try:
+        # Join split words with a hyphen if there is a space after the hyphen (e.g., "phar- macy" -> "pharmacy")
+        text = re.sub(r'(\w)- (\w)', r'\1\2', text)  
+
+        # Ensure no spaces between hyphenated words (e.g., "ever- evolving" -> "ever-evolving")
+        text = re.sub(r'(\w)-\s+(\w)', r'\1\2', text)  
+
+        # Clean up punctuation from words (remove all non-word characters except whitespace and hyphen)
+        clean_text = re.sub(r'[^\w\s\'-]', '', text)  # This removes punctuation except for hyphens and spaces
+        
+        # Spell Check (ignore custom terms)
+        words = clean_text.split()
+        misspelled = spell_checker.unknown(words)
+
+        # Handle possessives: ignore words ending with 's to prevent possessive forms from being flagged
+        misspelled = {
+            word: spell_checker.correction(word) 
+            for word in words 
+            if word.lower() not in CUSTOM_TERMS and not re.match(r"\w+'s$", word)
+            and word in spell_checker.unknown([word])
+        }
+        
+        # Filter out custom terms from the misspelled list
+        misspelled = {word: spell_checker.correction(word) for word in misspelled if word.lower() not in CUSTOM_TERMS}
+        
+        # Add back custom terms with no correction
+        for term in CUSTOM_TERMS:
+            if term in words:
+                misspelled[term] = term
+        
+         # Filter out words with `null` suggestions from being displayed as misspelled
+        misspelled = {word: correction for word, correction in misspelled.items() if correction is not None}
+        print(f"Misspelled words: {misspelled}")
+        print(f"Spell corrections: {misspelled}")
+
+        # Grammar Check
+        grammar_issues = grammar_tool.check(text)
+
+         # Print full details of grammar issues
+        for issue in grammar_issues:
+            print(f"Grammar issue: {issue.message}")
+            print(f"Context: {issue.context}")
+            print(f"Replacements: {issue.replacements}")
+
+          # Simplify the grammar issues output, only including the context (without suggestions)
+        grammar_suggestions = [{"text": match.context} for match in grammar_issues]
+        
+        # Optionally filter out unwanted grammar issues
+        for suggestion in grammar_suggestions:
+            # Ignore suggestions for Qanaa or other terms we don't want corrected
+            if "Qanaa" in suggestion['text']:
+                suggestion['text'] = suggestion['text']  # Keep the text as is, no correction
+
+        grammar_suggestions = [suggestion for suggestion in grammar_suggestions if "Qanaa" not in suggestion['text']]
+
+        print(f"Grammar issues found: {len(grammar_issues)}")
+        print(f"Grammar suggestions: {grammar_suggestions}")
+        
+        return misspelled, grammar_suggestions
+    
+    except Exception as e:
+        print(f"Error in spelling/grammar check: {e}")
+        return {}, []
+    
+sample_text = "Adherence to these requirements throughout development ensures user-friendly alignment with Qanaa Pharmacy’s healthcare"
+
+misspelled, grammar_suggestions = check_spelling_and_grammar(sample_text)  
+print("Misspelled:", misspelled)
+print("Grammar suggestions:", grammar_suggestions)
+
+   
 
 def parse_srs(text):
     parsed_data = []
@@ -55,7 +136,9 @@ def parse_srs(text):
         elif re.match(section_pattern, line):  # Main section titles
             # Save current section if content exists
             if current_section and current_content:
-                section_data = {"title": current_section, "content": current_content.strip()}
+            # Run spelling and grammar checks
+                spelling, grammar = check_spelling_and_grammar(current_content)
+                section_data = {"title": current_section, "content": current_content.strip(),"spelling_issues": spelling,"grammar_issues": grammar}
                 if current_subsection:
                     section_data["subtitle"] = current_subsection
                 parsed_data.append(section_data)
@@ -69,7 +152,9 @@ def parse_srs(text):
         elif current_section and re.match(subsection_pattern, line):  # Subsection titles
             # Save current subsection if content exists
             if current_subsection and current_content:
-                section_data = {"title": current_section, "subtitle": current_subsection, "content": current_content.strip()}
+                # Run spelling and grammar checks
+                spelling, grammar = check_spelling_and_grammar(current_content)
+                section_data = {"title": current_section, "subtitle": current_subsection, "content": current_content.strip(),"spelling_issues": spelling,"grammar_issues": grammar}
                 parsed_data.append(section_data)
                 current_content = ""
             
@@ -85,7 +170,9 @@ def parse_srs(text):
     
     # Save the last section or subsection if any content exists
     if current_section and current_content:
-        section_data = {"title": current_section, "content": current_content.strip()}
+        # Run spelling and grammar checks for the last section/subsection
+        spelling, grammar = check_spelling_and_grammar(current_content)
+        section_data = {"title": current_section, "content": current_content.strip(),"spelling_issues": spelling,"grammar_issues": grammar}
         if current_subsection:
             section_data["subtitle"] = current_subsection
         parsed_data.append(section_data)
