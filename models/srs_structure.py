@@ -1,7 +1,7 @@
 # models/srs_structure.py
 
 PREDEFINED_STRUCTURE = {
-    "Abstract": {},  # Assuming you want to include this section
+    "Abstract": {},  
     "1 Introduction": {
         "1.1 Purpose of this document": {},
         "1.2 Scope of this document": {},
